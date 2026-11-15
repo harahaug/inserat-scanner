@@ -73,7 +73,7 @@ details summary{color:var(--mut);font-size:14px}
   <button id="send">An Claude senden</button>
   <div id="msg"></div>
 
-  <details class="card">
+  <details class="card" id="set">
     <summary>Einstellungen</summary>
     <label for="repo">GitHub-Repo (Besitzer/Name)</label>
     <input id="repo" placeholder="harahaug/inserat-queue" autocapitalize="off">
@@ -151,8 +151,8 @@ function shrink(file){
 
 // --- Send to GitHub ---
 async function gh(path, opt={}){
-  const repo=store.get('repo'), tok=store.get('tok');
-  if(!repo||!tok) throw new Error('Repo/Token fehlt (Einstellungen).');
+  const repo=store.get('repo')||$('repo').value.trim()||'harahaug/inserat-queue', tok=store.get('tok')||$('tok').value.trim();
+  if(!repo||!tok) throw new Error('Token fehlt: unten bei Einstellungen eintragen und auf Speichern tippen.');
   const r = await fetch('https://api.github.com/repos/'+repo+path, { ...opt,
     headers:{ Authorization:'Bearer '+tok, Accept:'application/vnd.github+json', 'Content-Type':'application/json' }});
   if(!r.ok) throw new Error('GitHub '+r.status+': '+(await r.text()).slice(0,160));
@@ -187,6 +187,7 @@ $('send').onclick = async () => {
   $('send').disabled=false;
 };
 
+if(!store.get('tok')) $('set').open=true;
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
