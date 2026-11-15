@@ -36,7 +36,7 @@ details summary{color:var(--mut);font-size:14px}
 </head>
 <body>
 <main>
-  <h1>Inserat-Scanner <small style="font-size:12px;color:var(--mut);font-weight:400">v4</small></h1>
+  <h1>Inserat-Scanner <small style="font-size:12px;color:var(--mut);font-weight:400">v5</small></h1>
 
   <div class="card">
     <button id="scanBtn">📷 Barcode scannen</button>
@@ -76,7 +76,7 @@ details summary{color:var(--mut);font-size:14px}
   <div id="msg"></div>
 
   <details class="card" id="set">
-    <summary>Einrichtung (einmalig)</summary>
+    <summary>Optional: Direkt-Senden einrichten (spart einen Schritt)</summary>
     <a href="https://github.com/settings/personal-access-tokens/new?name=Inserat-Scanner&description=Inserat-Scanner%20Handy&target_name=harahaug&expires_in=365&contents=write&issues=write" target="_blank" rel="noopener" style="text-decoration:none"><button type="button">1. Token erstellen (GitHub öffnet sich)</button></a>
     <p style="margin:0;font-size:14px;color:var(--mut)">Dort: bei „Repository access" <b>Only select repositories</b> → <b>inserat-queue</b> wählen, ganz unten <b>Generate token</b>, dann auf das Kopier-Symbol neben dem Token tippen.</p>
     <button id="paste" type="button">2. Token aus Zwischenablage einfügen</button>
@@ -180,9 +180,27 @@ async function gh(path, opt={}){
   if(!r.ok) throw new Error('GitHub '+r.status+': '+(await r.text()).slice(0,160));
   return r.json();
 }
+function bodyText(ean,id,files){
+  return [
+    '**EAN/Name:** '+(ean||'nur Foto - bitte per Bild erkennen'),
+    '**Zustand:** '+$('zustand').value,
+    '**Zubehör/Mängel:** '+($('notiz').value.trim()||'-'),
+    '**Wunschpreis:** '+($('wunsch').value.trim()||'-'),
+    '**Versand:** '+$('vers').value,
+    '**Fotos:** '+(files&&files.length?files.join(', '):'siehe angehängte Bilder'),
+    '', '<!-- id:'+id+' -->'
+  ].join('\n');
+}
 $('send').onclick = async () => {
   const ean=$('ean').value.trim();
-  if(!ean && !photos.length){ show('Bitte EAN/Name oder Foto angeben.','err'); return; }
+  if(!store.get('tok')){
+    // Ohne Token: vorausgefülltes Issue in GitHub öffnen (dort eingeloggt), Foto dort anhängen
+    const id = new Date().toISOString().replace(/[-:T]/g,'').slice(0,14);
+    const t = 'Artikel '+id+(ean?' - '+ean.slice(0,60):' - nur Foto');
+    const u = 'https://github.com/harahaug/inserat-queue/issues/new?labels=neu&title='+encodeURIComponent(t)+'&body='+encodeURIComponent(bodyText(ean,id,[]));
+    show('GitHub öffnet sich: dort Foto(s) anhängen (Büroklammer/„Add files") und „Submit new issue" tippen.','ok');
+    location.href = u; return;
+  }
   $('send').disabled=true; show('Sende …','ok');
   try{
     const id = new Date().toISOString().replace(/[-:T]/g,'').slice(0,14);
@@ -192,16 +210,8 @@ $('send').onclick = async () => {
       await gh('/contents/'+p,{method:'PUT',body:JSON.stringify({message:'Foto '+id,content:photos[i].b64})});
       files.push(p);
     }
-    const body = [
-      '**EAN/Name:** '+(ean||'–'),
-      '**Zustand:** '+$('zustand').value,
-      '**Zubehör/Mängel:** '+($('notiz').value.trim()||'–'),
-      '**Wunschpreis:** '+($('wunsch').value.trim()||'–'),
-      '**Versand:** '+$('vers').value,
-      '**Fotos:** '+(files.join(', ')||'–'),
-      '', '<!-- id:'+id+' -->'
-    ].join('\n');
-    const title = 'Artikel '+id+(ean?' – '+ean.slice(0,60):'');
+    const body = bodyText(ean,id,files);
+    const title = 'Artikel '+id+(ean?' - '+ean.slice(0,60):' - nur Foto');
     const issue = await gh('/issues',{method:'POST',body:JSON.stringify({title,body,labels:['neu']})});
     show('Gesendet ✓ (Issue #'+issue.number+'). Freigabe per Kommentar in der GitHub-App.','ok');
     photos.length=0; renderThumbs(); $('ean').value=''; $('notiz').value=''; $('wunsch').value='';
@@ -209,7 +219,6 @@ $('send').onclick = async () => {
   $('send').disabled=false;
 };
 
-if(!store.get('tok')) $('set').open=true;
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
