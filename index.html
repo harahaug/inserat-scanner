@@ -36,7 +36,7 @@ details summary{color:var(--mut);font-size:14px}
 </head>
 <body>
 <main>
-  <h1>Inserat-Scanner <small style="font-size:12px;color:var(--mut);font-weight:400">v6</small></h1>
+  <h1>Inserat-Scanner <small style="font-size:12px;color:var(--mut);font-weight:400">v7</small></h1>
 
   <div class="card">
     <button id="scanBtn">📷 Barcode scannen</button>
@@ -92,6 +92,8 @@ const store = {
   set(k,v){ try{localStorage.setItem(k,v)}catch(e){} }
 };
 const photos = []; // {name, b64, url}
+const RELAY = ''; // wird nach dem Deploy gesetzt: https://inserat-relay.<name>.workers.dev
+try{ const m=location.hash.match(/k=([A-Za-z0-9]+)/); if(m){ store.set('key',m[1]); history.replaceState(null,'',location.pathname); } }catch(e){}
 
 $('repo').value = store.get('repo') || 'harahaug/inserat-queue';
 $('tok').value = store.get('tok');
@@ -193,6 +195,19 @@ function bodyText(ean,id,files){
 }
 $('send').onclick = async () => {
   const ean=$('ean').value.trim();
+  if(RELAY && store.get('key')){
+    $('send').disabled=true; show('Sende …','ok');
+    try{
+      const r=await fetch(RELAY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        key:store.get('key'), ean, zustand:$('zustand').value, notiz:$('notiz').value.trim(),
+        wunsch:$('wunsch').value.trim(), versand:$('vers').value, photos:photos.map(p=>p.b64)})});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(j.error||('Fehler '+r.status));
+      show('Gesendet ✓ (Artikel #'+j.issue+'). Freigabe per Kommentar in der GitHub-App.','ok');
+      photos.length=0; renderThumbs(); $('ean').value=''; $('notiz').value=''; $('wunsch').value='';
+    }catch(e){ show(String(e.message||e),'err'); }
+    $('send').disabled=false; return;
+  }
   if(!store.get('tok')){
     if(photos.length && !confirm('Achtung: Ohne Einrichtung werden deine '+photos.length+' Foto(s) NICHT mitgesendet. Du musst sie gleich in GitHub selbst anhängen (Fotos-Mediathek). Trotzdem weiter?')) return;
     // Ohne Token: vorausgefülltes Issue in GitHub öffnen (dort eingeloggt), Foto dort anhängen

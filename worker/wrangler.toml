@@ -1,0 +1,7 @@
+name = "inserat-relay"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+[vars]
+REPO = "harahaug/inserat-queue"
+ALLOWED_ORIGIN = "https://harahaug.github.io"
