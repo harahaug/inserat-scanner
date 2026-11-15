@@ -36,7 +36,7 @@ details summary{color:var(--mut);font-size:14px}
 </head>
 <body>
 <main>
-  <h1>Inserat-Scanner <small style="font-size:12px;color:var(--mut);font-weight:400">v5</small></h1>
+  <h1>Inserat-Scanner <small style="font-size:12px;color:var(--mut);font-weight:400">v6</small></h1>
 
   <div class="card">
     <button id="scanBtn">📷 Barcode scannen</button>
@@ -194,6 +194,7 @@ function bodyText(ean,id,files){
 $('send').onclick = async () => {
   const ean=$('ean').value.trim();
   if(!store.get('tok')){
+    if(photos.length && !confirm('Achtung: Ohne Einrichtung werden deine '+photos.length+' Foto(s) NICHT mitgesendet. Du musst sie gleich in GitHub selbst anhängen (Fotos-Mediathek). Trotzdem weiter?')) return;
     // Ohne Token: vorausgefülltes Issue in GitHub öffnen (dort eingeloggt), Foto dort anhängen
     const id = new Date().toISOString().replace(/[-:T]/g,'').slice(0,14);
     const t = 'Artikel '+id+(ean?' - '+ean.slice(0,60):' - nur Foto');
