@@ -36,11 +36,13 @@ details summary{color:var(--mut);font-size:14px}
 </head>
 <body>
 <main>
-  <h1>Inserat-Scanner</h1>
+  <h1>Inserat-Scanner <small style="font-size:12px;color:var(--mut);font-weight:400">v4</small></h1>
 
   <div class="card">
     <button id="scanBtn">📷 Barcode scannen</button>
-    <div id="reader"></div>
+    <button id="scanPhotoBtn" class="sec" type="button">📸 Barcode per Foto lesen</button>
+    <input id="scanPhotoIn" type="file" accept="image/*" capture="environment" hidden>
+    <div id="reader"></div><div id="reader2" style="display:none"></div>
     <label for="ean">EAN / Artikelname</label>
     <input id="ean" inputmode="numeric" placeholder="EAN oder kurzer Name, z. B. Bosch Akkuschrauber">
   </div>
@@ -117,12 +119,26 @@ $('scanBtn').onclick = async () => {
   try{
     await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:260,height:140}},
       async txt => { $('ean').value = txt; if(navigator.vibrate) navigator.vibrate(60); await stopScan(); show('Code erkannt: '+txt,'ok'); });
-  }catch(e){ show('Kamera nicht verfügbar: '+e,'err'); await stopScan(); }
+  }catch(e){ show('Live-Kamera blockiert ('+((e&&e.name)||e)+'). Nimm Barcode per Foto lesen.','err'); await stopScan(); }
 };
 async function stopScan(){
   try{ if(scanner){ await scanner.stop(); scanner.clear(); } }catch(e){}
   scanner=null; $('scanBtn').textContent='📷 Barcode scannen';
 }
+
+// --- Barcode per Foto (Fallback) ---
+$('scanPhotoBtn').onclick = () => $('scanPhotoIn').click();
+$('scanPhotoIn').onchange = async e => {
+  const f=e.target.files[0]; if(!f) return;
+  show('Lese Barcode ...','ok');
+  try{
+    const sc=new Html5Qrcode('reader2');
+    const r=await sc.scanFile(f,false);
+    $('ean').value=r; show('Code erkannt: '+r,'ok');
+    const b64=await shrink(f); photos.push({b64,url:'data:image/jpeg;base64,'+b64}); renderThumbs();
+  }catch(err){ show('Kein Barcode erkannt - naeher ran, scharf, gerade halten. Oder EAN tippen.','err'); }
+  e.target.value='';
+};
 
 // --- Photos ---
 $('photoBtn').onclick = () => $('photoIn').click();
