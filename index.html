@@ -74,12 +74,11 @@ details summary{color:var(--mut);font-size:14px}
   <div id="msg"></div>
 
   <details class="card" id="set">
-    <summary>Einstellungen</summary>
-    <label for="repo">GitHub-Repo (Besitzer/Name)</label>
-    <input id="repo" placeholder="harahaug/inserat-queue" autocapitalize="off">
-    <label for="tok">Zugriffs-Token (nur auf diesem Gerät gespeichert)</label>
-    <input id="tok" type="password" autocapitalize="off" placeholder="github_pat_…">
-    <button id="save" class="sec">Speichern</button>
+    <summary>Einrichtung (einmalig)</summary>
+    <a href="https://github.com/settings/personal-access-tokens/new?name=Inserat-Scanner&description=Inserat-Scanner%20Handy&target_name=harahaug&expires_in=365&contents=write&issues=write" target="_blank" rel="noopener" style="text-decoration:none"><button type="button">1. Token erstellen (GitHub öffnet sich)</button></a>
+    <p style="margin:0;font-size:14px;color:var(--mut)">Dort: bei „Repository access" <b>Only select repositories</b> → <b>inserat-queue</b> wählen, ganz unten <b>Generate token</b>, dann auf das Kopier-Symbol neben dem Token tippen.</p>
+    <button id="paste" type="button">2. Token aus Zwischenablage einfügen</button>
+    <input id="repo" type="hidden"><input id="tok" type="hidden">
   </details>
 </main>
 
@@ -94,7 +93,14 @@ const photos = []; // {name, b64, url}
 
 $('repo').value = store.get('repo') || 'harahaug/inserat-queue';
 $('tok').value = store.get('tok');
-$('save').onclick = () => { store.set('repo',$('repo').value.trim()); store.set('tok',$('tok').value.trim()); show('Gespeichert','ok'); };
+$('paste').onclick = async () => {
+  try{
+    const t=(await navigator.clipboard.readText()).trim();
+    if(!/^github_pat_[A-Za-z0-9_]+$/.test(t)){ show('In der Zwischenablage ist kein Token. Erst Schritt 1 und Kopieren.','err'); return; }
+    store.set('tok',t); store.set('repo','harahaug/inserat-queue'); $('tok').value=t; $('set').open=false;
+    show('Token gespeichert ✓ – du kannst senden.','ok');
+  }catch(e){ show('Einfügen nicht erlaubt – bitte „Einfügen" bestätigen.','err'); }
+};
 
 function show(t,c){ const m=$('msg'); m.textContent=t; m.className=c; }
 
